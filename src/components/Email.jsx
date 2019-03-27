@@ -4,11 +4,12 @@ class Email extends Component {
   constructor() {
     super();
     this.state = {
-      messageSubject: '',
-      messageFrom: '',
-      messageDate: '',
-      messageHtml: ''
-    }
+      messageSubject: "",
+      messageFrom: "",
+      messageDate: "",
+      messageHtml: "",
+      labels: []
+    };
   }
 
   // React function to run after component is loaded after fetch request
@@ -16,9 +17,10 @@ class Email extends Component {
     let token = this.props.accessToken;
     let messageId = this.props.messageId;
 
-    const getMsgUrl = "https://www.googleapis.com/gmail/v1/users/me/messages/" + messageId;
+    const getMsgUrl =
+      "https://www.googleapis.com/gmail/v1/users/me/messages/" + messageId;
     let params = "?/format=raw"; // "full", "metadata", "minimal" or "raw"
-  
+
     return fetch(getMsgUrl + params, {
       method: "GET",
       headers: {
@@ -31,7 +33,9 @@ class Email extends Component {
         this.setState({
           messageSubject: processed.messageSubject,
           messageFrom: processed.messageFrom,
-          messageDate: processed.messageDate
+          messageDate: processed.messageDate,
+          messageHtml: processed.cleanHTMLoutput,
+          labels: data.labelIds
         });
       })
       .catch(err => console.log(err));
@@ -39,7 +43,7 @@ class Email extends Component {
 
   /**
    * This method processes the raw body data returned by Gmail and decodes and parses it.
-   * 
+   *
    * notes on MIME types
    * text/plain * Most messages composed by people have a plaintext version, for email readers that do not support HTML.
    * text/html * Most rich emails are actually HTML. This one tends to be the most canonical.
@@ -47,12 +51,12 @@ class Email extends Component {
    * multipart/mixed * When messages have an attachment (that could be an image). The parts of this component are usually either multipart/related (if there is an embedded image) or text/html. If there is an attachment, this will likely be at the top level.
    * multipart/alternative * When there are plaintext and html versions of this message. Most emails will have this at the top level, unless there is an attachment.
    */
-  processBody = (data) => {    
-    let body = "";  
+  processBody = data => {
+    let body = "";
     let mimeType = data.payload.mimeType; // see notes on MIME types above
     // Figure out how to get the message body based on MimeType
-  
-    switch(mimeType) {
+
+    switch (mimeType) {
       case "text/html":
         body = data.payload.body.data;
         break;
@@ -62,62 +66,109 @@ class Email extends Component {
       case "multipart/mixed":
         for (let i = 0; i < data.payload.parts.length; i++) {
           let innerMimeType = data.payload.parts[i].mimeType;
-          if (innerMimeType == "text/html" || innerMimeType == "text/plain") body = data.payload.parts[i].body.data;
-          else if (innerMimeType == "multipart/alternative") body = data.payload.parts[i].parts[1].body.data;
+          if (innerMimeType == "text/html" || innerMimeType == "text/plain")
+            body = data.payload.parts[i].body.data;
+          else if (innerMimeType == "multipart/alternative")
+            body = data.payload.parts[i].parts[1].body.data;
           // TODO
           // else if (innerMimeType=="application/pdf") let attachmentId=data.payload.parts[i].body.attachmentId;
         }
         break;
       default:
         body = "Unable to get Message";
+        break;
     }
-  
+
     let formattedBody = body.replace(/-/g, "+").replace(/_/g, "/"); // format base64encoded string to use window.atob()
     let decodedBody = atob(formattedBody); // use window.atob() to decode
     let cleanHTMLoutput = "";
-  
+
     // delete unwanted characters
     for (let j = 0; j < decodedBody.length; j++) {
-      if (decodedBody.charCodeAt(j) <= 127) cleanHTMLoutput += decodedBody.charAt(j);
+      if (decodedBody.charCodeAt(j) <= 127)
+        cleanHTMLoutput += decodedBody.charAt(j);
     }
-  
+
     let messageDate = "";
     let messageSubject = "";
     let messageFrom = "";
-  
+
     // find message Date, Subject and From address from the message header
     let messageHeaders = data.payload.headers;
     for (let k = 0; k < messageHeaders.length; k++) {
-      if (messageHeaders[k].name == "Date") messageDate = messageHeaders[k].value;
-      if (messageHeaders[k].name == "Subject") messageSubject = messageHeaders[k].value;
-      if (messageHeaders[k].name == "From") messageFrom = messageHeaders[k].value;
+      if (messageHeaders[k].name == "Date")
+        messageDate = messageHeaders[k].value;
+      if (messageHeaders[k].name == "Subject")
+        messageSubject = messageHeaders[k].value;
+      if (messageHeaders[k].name == "From")
+        messageFrom = messageHeaders[k].value;
     }
-  
+
+    messageSubject = this.truncateText(messageSubject, 30);
+    messageFrom = this.truncateText(messageFrom, 20);
+    messageDate = this.truncateText(messageDate, 20);
+
     return {
       messageSubject,
       messageFrom,
       messageDate,
       cleanHTMLoutput
-    } 
-  } 
+    };
+  };
+
+  /**
+   * Truncate Text
+   * @param {*} text text to truncate
+   * @param {*} limit char limit to next end of word
+   */
+  truncateText = (text, limit) => {
+    const shortened = text.indexOf(" ", limit);
+    if (shortened == -1) return text;
+    return text.substring(0, shortened) + "...";
+  };
 
   render() {
-
     // CSS for Email Block
     const emailStyle = {
-      color: "#E5DE44",
-      backgroundColor: "#001A26",
-      padding: "10px",
-      margin: "10px",
-      border: "1px solid #E5DE44",
-      borderRadius: "5px"
+      container: {
+        display: "grid",
+        alignItems: "center",
+        height: "100px",
+        padding: "10px 30px"
+      },
+      msgSubject: { fontSize: "20px", padding: "0", margin: "0" },
+      msgFrom: { fontSize: "15px", opacity: "0.8", padding: "0", margin: "0" },
+      msgDate: { fontSize: "15px", opacity: "0.8", padding: "0", margin: "0" },
+      labels: {
+        container: {
+          display: 'flex'
+        },
+        label: {
+          fontWeight: '900',
+          fontSize: '10px',
+          borderRadius: '5px',
+          backgroundColor: '#f7c8f7',
+          color: '#281e28',
+          padding: '2px 5px',
+          margin: '2px'
+        }
+      }
     };
 
+    let handleToUpdate = this.props.handleToUpdate;
+
     return (
-      <div style={emailStyle}>
-        <h2>{this.state.messageSubject}</h2>
-        <h3>{this.state.messageFrom}</h3>
-        <h3>{this.state.messageDate}</h3>
+      <div
+        className="email-container"
+        onClick={() => handleToUpdate(this.state.messageHtml)}
+        style={emailStyle.container}
+      >
+        <p className="message-subject" style={emailStyle.msgSubject}>{this.state.messageSubject}</p>
+        <p className="message-from" style={emailStyle.msgFrom}>{this.state.messageFrom}</p>
+        <p className="message-date" style={emailStyle.msgDate}>{this.state.messageDate}</p>
+        <div style={emailStyle.labels.container}>
+          {this.state.labels.map((label) => <p style={emailStyle.labels.label}>{label}</p>)}
+        </div>
       </div>
     );
   }

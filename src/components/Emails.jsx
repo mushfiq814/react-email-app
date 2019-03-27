@@ -1,15 +1,19 @@
 import React, { Component } from "react";
 import Email from "./Email";
+import EmailView from "./EmailView";
 // Import CONFIG VARS
 import ENV_VARS from "../gmailAPI/.config/config"
+let val = '';
 
 class Emails extends Component {
   constructor() {
     super();
     this.state = {
-      emails : []
+      emails : [],
+      messageView: ''
     }
   }
+
 
   // React function to run after component is loaded after fetch request
   componentDidMount() {
@@ -28,13 +32,16 @@ class Emails extends Component {
       .then(res => res.json())
       .then(data => {
         let token = data.access_token;
+        let maxResults = 20;
 
         const gMailApiEndPoint = "https://www.googleapis.com/gmail/v1/users/me";
-        let params = "/messages?";
+        let params = "/messages?maxResults=" + maxResults;
         
-        let labels = ["INBOX"];
-        for (let i = 0; i < labels.length; i++) {
-          params += `&labelIds=${labels[i]}`;
+        let labels = [];
+        if (labels.length) {
+          for (let i = 0; i < labels.length; i++) {
+            params += `&labelIds=${labels[i]}`;
+          }
         }
 
         fetch(gMailApiEndPoint + params, {
@@ -47,33 +54,50 @@ class Emails extends Component {
           .then(data => {
             const messages = data.messages;
             console.log("Number of Messages: " + messages.length);
-            for (let j = 0; j < 10; j++) {
+            for (let j = 0; j < messages.length; j++) {
               this.setState(prevState => ({
                 emails: [...prevState.emails, {id: (j+1), accessToken: token, messageId: messages[j].id}]
               }))
-              // getMessage(token, messages[i].id);
             }
           })
           .catch(err => console.log(err));
 
-        // getMessageList(accessToken);
       });
   }
   
+  handleToUpdate = (a) => {
+    this.setState({ messageView: a });
+  }
+
   render() {
 
-    // CSS for Email List
-    const emailListStyle = {
-      backgroundColor: "#053752",
-      height: '100%',
-      width: '100%'
+    // CSS for EmailList and EmailView
+    const style = {
+      emailList: {
+        backgroundColor: "#fff",
+        height: '100%',
+        width: '100%',
+      },
+      emailView: {
+        height: '100%',
+        width: '100%',
+      }
     };
 
     return (
-      <div style={ emailListStyle }>
-        {this.state.emails.map(email => (
-          <Email key={email.id} messageId={email.messageId} accessToken={email.accessToken} />
-        ))}
+      <div className="Container">
+        <div className="Content">
+          <div className="Wrapper">
+            <div className="Email-List" style={ style.emailList }>
+              {this.state.emails.map(email => (
+                <Email key={email.id} messageId={email.messageId} accessToken={email.accessToken} handleToUpdate={this.handleToUpdate}/>
+              ))}
+            </div>
+            <div className="emailView" style={style.emailView}>
+              <EmailView message={this.state.messageView}/>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
