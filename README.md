@@ -1,3 +1,5 @@
+# React Gmail Client
+
 A simple React Email Client that makes calls to the Gmail API as of now.
 
 This is a Work in Progress. I am learning React through this app and as such, have not implemented the best ways of implementing a RESTful API with React. Currently credentials are being stored in a config.js file that you have to manually create (the template can be foiund in `src/gmailAPI/.config/config,example.js`). Access Tokens are stored in component states until I find a better way to work with everything.
