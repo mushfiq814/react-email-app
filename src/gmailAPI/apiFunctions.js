@@ -3,20 +3,22 @@ let primaryEmail = "mushfiq8194@gmail.com";
 
 function main() {
   let accessToken = "";
-  
+
   // Import CONFIG VARS
   import ENV_VARS from "./.config/config.js";
   const clientID = ENV_VARS.CLIENT_ID;
   const clientSecret = ENV_VARS.CLIENT_SECRET;
   const redirectUri = ENV_VARS.REDIRECT_URI;
   const refreshToken = ENV_VARS.REFRESH_TOKEN;
-  
+
   // check if redirected
   const url = new URLSearchParams(window.location.search);
   // if (refreshToken.length>0) getAcessToken(refreshToken);
-  if (refreshToken) getAccessTokenWithRefreshToken(refreshToken,clientID,clientSecret);
+  if (refreshToken)
+    getAccessTokenWithRefreshToken(refreshToken, clientID, clientSecret);
   // otherwise, get access token using code
-  else if (url.has("code")) getAcessTokenWithCode(url.get("code"),clientID,clientSecret,redirectUri);
+  else if (url.has("code"))
+    getAcessTokenWithCode(url.get("code"), clientID, clientSecret, redirectUri);
 }
 
 /**
@@ -26,7 +28,7 @@ function main() {
  * @param {string} redirectUri
  * @return code
  */
-function redirect(clientID,redirectUri) {
+function redirect(clientID, redirectUri) {
   const oauth2EndPoint = "https://accounts.google.com/o/oauth2/v2/auth";
   const scopes = [
     "https://mail.google.com/", // Full access to the account, including permanent deletion of threads and messages. This scope should only be requested if your application needs to immediately and permanently delete threads and messages, bypassing Trash; all other actions can be performed with less permissive scopes.
@@ -41,7 +43,9 @@ function redirect(clientID,redirectUri) {
     "https://www.googleapis.com/auth/gmail.settings.sharing" // Manage sensitive mail settings, including forwarding rules and aliases.
   ];
 
-  let params = `?client_id=${clientID}&redirect_uri=${redirectUri}&response_type=code&access_type=offline&scope=${scopes[0]}&state=randomNumber&prompt=consent`;
+  let params = `?client_id=${clientID}&redirect_uri=${redirectUri}&response_type=code&access_type=offline&scope=${
+    scopes[0]
+  }&state=randomNumber&prompt=consent`;
 
   // console.log(oauth2EndPoint+params);
   window.location.replace(oauth2EndPoint + params);
@@ -55,7 +59,7 @@ function redirect(clientID,redirectUri) {
  * @param {string} redirectUri
  * @returns accessToken
  */
-function getAcessTokenWithCode(code,clientID,clientSecret,redirectUri) {
+function getAcessTokenWithCode(code, clientID, clientSecret, redirectUri) {
   const authUrl = "https://www.googleapis.com/oauth2/v4/token";
   const params = `?code=${code}&client_id=${clientID}&client_secret=${clientSecret}&redirect_uri=${redirectUri}&grant_type=authorization_code`;
   return fetch(authUrl + params, {
@@ -77,7 +81,7 @@ function getAcessTokenWithCode(code,clientID,clientSecret,redirectUri) {
  * @param {string} clientSecret
  * @returns accessToken
  */
-function getAccessTokenWithRefreshToken(refreshToken,clientID,clientSecret) {
+function getAccessTokenWithRefreshToken(refreshToken, clientID, clientSecret) {
   const refreshUrl = "https://www.googleapis.com/oauth2/v4/token";
   const params = `?refresh_token=${refreshToken}&client_id=${clientID}&client_secret=${clientSecret}&grant_type=refresh_token`;
 
@@ -100,7 +104,7 @@ function getAccessTokenWithRefreshToken(refreshToken,clientID,clientSecret) {
 function getMessageList(token) {
   const gMailApiEndPoint = "https://www.googleapis.com/gmail/v1/users/me";
   let params = "/messages?";
-  
+
   let labels = ["INBOX"];
   for (let i = 0; i < labels.length; i++) {
     params += `&labelIds=${labels[i]}`;
@@ -139,7 +143,8 @@ function getMessageList(token) {
  * multipart/alternative * When there are plaintext and html versions of this message. Most emails will have this at the top level, unless there is an attachment.
  */
 function getMessage(token, messageId) {
-  const getMsgUrl = "https://www.googleapis.com/gmail/v1/users/me/messages/" + messageId;
+  const getMsgUrl =
+    "https://www.googleapis.com/gmail/v1/users/me/messages/" + messageId;
   let params = "?/format=raw"; // "full", "metadata", "minimal" or "raw"
 
   return fetch(getMsgUrl + params, {
@@ -205,7 +210,6 @@ function getMessage(token, messageId) {
       // messageFrom
       // messageDate
       // cleanHTMLoutput
-
     })
     .catch(err => console.log(err));
 }

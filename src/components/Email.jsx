@@ -8,7 +8,9 @@ class Email extends Component {
       messageFrom: "",
       messageDate: "",
       messageHtml: "",
-      labels: []
+      messageSnippet: "",
+      labels: [],
+      isUnread: "false"
     };
   }
 
@@ -30,12 +32,25 @@ class Email extends Component {
       .then(res => res.json())
       .then(data => {
         let processed = this.processBody(data);
+        let processedSnippet = this.truncateText(data.snippet, 30);
+
+        let isUnread = "false";
+
+        for (let label of data.labelIds) {
+          if (label === "UNREAD") {
+            isUnread = "true";
+            break;
+          }
+        }
+
         this.setState({
           messageSubject: processed.messageSubject,
           messageFrom: processed.messageFrom,
           messageDate: processed.messageDate,
           messageHtml: processed.cleanHTMLoutput,
-          labels: data.labelIds
+          messageSnippet: processedSnippet,
+          labels: data.labelIds,
+          isUnread: isUnread
         });
       })
       .catch(err => console.log(err));
@@ -104,7 +119,7 @@ class Email extends Component {
         messageFrom = messageHeaders[k].value;
     }
 
-    messageSubject = this.truncateText(messageSubject, 30);
+    // messageSubject = this.truncateText(messageSubject, 30);
     messageFrom = this.truncateText(messageFrom, 20);
     messageDate = this.truncateText(messageDate, 20);
 
@@ -136,21 +151,30 @@ class Email extends Component {
         height: "100px",
         padding: "10px 30px"
       },
-      msgSubject: { fontSize: "20px", padding: "0", margin: "0" },
-      msgFrom: { fontSize: "15px", opacity: "0.8", padding: "0", margin: "0" },
-      msgDate: { fontSize: "15px", opacity: "0.8", padding: "0", margin: "0" },
+      msgSubject: {
+        fontWeight: this.state.isUnread === "true" ? "600" : "200",
+        fontSize: "20px",
+        padding: "0",
+        margin: "0"
+      },
+      msgFromAndDate: {
+        fontSize: "15px",
+        opacity: "0.8",
+        padding: "0",
+        margin: "0"
+      },
       labels: {
         container: {
-          display: 'flex'
+          display: "flex"
         },
         label: {
-          fontWeight: '900',
-          fontSize: '10px',
-          borderRadius: '5px',
-          backgroundColor: '#f7c8f7',
-          color: '#281e28',
-          padding: '2px 5px',
-          margin: '2px'
+          fontWeight: "900",
+          fontSize: "10px",
+          borderRadius: "5px",
+          backgroundColor: "#f7c8f7",
+          color: "#281e28",
+          padding: "2px 5px",
+          margin: "2px"
         }
       }
     };
@@ -160,14 +184,14 @@ class Email extends Component {
     return (
       <div
         className="email-container"
-        onClick={() => handleToUpdate(this.state.messageHtml)}
+        onClick={() => handleToUpdate(this.state.messageHtml, this.state.messageSubject)}
         style={emailStyle.container}
       >
-        <p className="message-subject" style={emailStyle.msgSubject}>{this.state.messageSubject}</p>
-        <p className="message-from" style={emailStyle.msgFrom}>{this.state.messageFrom}</p>
-        <p className="message-date" style={emailStyle.msgDate}>{this.state.messageDate}</p>
+        <p className="message-subject" style={emailStyle.msgSubject}>{this.state.messageSnippet}</p>
+        <p className="message-from" style={emailStyle.msgFromAndDate}>{this.state.messageFrom}</p>
+        <p className="message-date" style={emailStyle.msgFromAndDate}>{this.state.messageDate}</p>
         <div style={emailStyle.labels.container}>
-          {this.state.labels.map((label) => <p style={emailStyle.labels.label}>{label}</p>)}
+          {this.state.labels.map(label => (<p style={emailStyle.labels.label}>{label}</p>))}
         </div>
       </div>
     );
